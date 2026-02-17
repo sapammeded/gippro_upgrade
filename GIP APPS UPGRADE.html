@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GIP V5 · HYBRID SCALP ENGINE</title>
+
+<style>
+body{margin:0;font-family:Arial;background:#0b0f18;color:#fff;padding:15px;}
+.card{background:#141a2a;border:1px solid #1f2940;border-radius:12px;padding:15px;margin-bottom:15px;}
+h2{margin-top:0;color:#00eaff;}
+input{width:100%;padding:8px;margin:4px 0;background:#000;border:1px solid #00eaff;color:#0ff;border-radius:6px;}
+button{width:100%;padding:10px;margin-top:6px;border-radius:6px;font-weight:bold;background:#101828;border:1px solid #00eaff;color:#0ff;cursor:pointer;}
+.status{padding:8px;margin:5px 0;border-radius:6px;text-align:center;}
+.green{color:#00ff99;}
+.red{color:#ff4d4d;}
+.yellow{color:#ffcc00;}
+.gray{color:#aaa;}
+.big{font-size:20px;font-weight:bold;}
+.bar{height:8px;background:#222;border-radius:5px;overflow:hidden;margin-top:5px;}
+.fill{height:100%;background:linear-gradient(90deg,#ff4d4d,#ffcc00,#00ff99);width:0%;}
+.small{font-size:12px;color:#aaa;margin-top:5px;white-space:pre-line;}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;}
+.log{background:#0a0e14;padding:8px;border-radius:6px;font-family:monospace;font-size:11px;height:100px;overflow-y:auto;color:#0ff;}
+.deepBox{background:#101826;border:1px solid #23304a;padding:10px;border-radius:8px;margin-top:6px;}
+</style>
+</head>
+<body>
+
+<!-- ================= CORE ENGINE (TIDAK DIUBAH) ================= -->
+
+<div class="card">
+<h2>🔒 LOCK STRUCTURE (1x per H1)</h2>
+H1 High <input type="number" id="h1h">
+H1 Low <input type="number" id="h1l">
+M30 High <input type="number" id="m30h">
+M30 Low <input type="number" id="m30l">
+M15 High <input type="number" id="m15h">
+M15 Low <input type="number" id="m15l">
+<button onclick="lockLevels()">LOCK STRUCTURE</button>
+<div id="lockInfo" class="small"></div>
+</div>
+
+<div class="card">
+<h2>🏦 H2 / H4 FILTER</h2>
+H4 High <input type="number" id="h4h">
+H4 Low <input type="number" id="h4l">
+H2 High <input type="number" id="h2h">
+H2 Low <input type="number" id="h2l">
+<button onclick="setInstitutional()">SET FILTER</button>
+<div id="institutionInfo" class="small"></div>
+</div>
+
+<div class="card">
+<h2>📥 M5 MEMORY (12 SLOT)</h2>
+<div class="grid">
+<input type="number" id="m5_1"><input type="number" id="m5_2"><input type="number" id="m5_3">
+<input type="number" id="m5_4"><input type="number" id="m5_5"><input type="number" id="m5_6">
+<input type="number" id="m5_7"><input type="number" id="m5_8"><input type="number" id="m5_9">
+<input type="number" id="m5_10"><input type="number" id="m5_11"><input type="number" id="m5_12">
+</div>
+<button onclick="processEngine()">PROCESS ENGINE</button>
+<div class="small">Isi sesuai urutan close candle. Telat input aman.</div>
+</div>
+
+<div class="card">
+<h2>📊 ENGINE STATUS</h2>
+<div id="h1Status" class="status gray">H1: WAIT</div>
+<div id="m30Status" class="status gray">M30: WAIT</div>
+<div id="m15Status" class="status gray">M15: WAIT</div>
+<div id="m5Status" class="status gray">M5: WAIT</div>
+<div id="flowStatus" class="status gray">FLOW: -</div>
+<div id="pressureStatus" class="status gray">PRESSURE: 0</div>
+<div id="finalStatus" class="status big gray">FINAL: -</div>
+<div class="bar"><div id="confidenceBar" class="fill"></div></div>
+</div>
+
+<!-- ================= DEEP INTERPRETATION LAYER ================= -->
+
+<div class="card">
+<h2>🧠 DEEP ENGINE INTERPRETATION</h2>
+
+<div class="deepBox" id="deepFlow"></div>
+<div class="deepBox" id="deepStructure"></div>
+<div class="deepBox" id="deepInstitution"></div>
+<div class="deepBox" id="deepConflict"></div>
+<div class="deepBox" id="deepConclusion"></div>
+
+</div>
+
+<div class="card">
+<h2>🛡 RISK ENGINE</h2>
+RR <input type="number" id="rrInput" value="2" step="0.1">
+<div id="entry" class="small"></div>
+<div id="sl" class="small"></div>
+<div id="tp" class="small"></div>
+</div>
+
+<div class="card">
+<h2>📝 GOLDEN LOG</h2>
+<div id="log" class="log"></div>
+</div>
+
+<script>
+
+/*
+PERMINTAAN USER:
+Tambahkan penjelasan detail untuk semua kondisi
+Flow bukan cuma netral
+Institutional bukan cuma “Structure Safe”
+Semua hasil harus punya arti
+TANPA MERUBAH CORE
+*/
+
+let levels=null;
+let institutional=null;
+let lockedHour=null;
+let logData=[];
+
+function lockLevels(){
+let now=new Date().getHours();
+if(lockedHour===now){ lockInfo.innerText="Sudah lock periode ini."; return;}
+levels={
+H1:{high:parseFloat(h1h.value),low:parseFloat(h1l.value)},
+M30:{high:parseFloat(m30h.value),low:parseFloat(m30l.value)},
+M15:{high:parseFloat(m15h.value),low:parseFloat(m15l.value)}
+};
+if(Object.values(levels).some(tf=>isNaN(tf.high)||isNaN(tf.low))){alert("Isi level valid.");return;}
+lockedHour=now;
+lockInfo.innerText="Structure locked jam "+now+":00";
+}
+
+function setInstitutional(){
+institutional={
+H4:{high:parseFloat(h4h.value),low:parseFloat(h4l.value)},
+H2:{high:parseFloat(h2h.value),low:parseFloat(h2l.value)}
+};
+institutionInfo.innerText="Filter aktif.";
+}
+
+function getM5(){
+let arr=[];
+for(let i=1;i<=12;i++){
+let v=parseFloat(document.getElementById("m5_"+i).value);
+if(!isNaN(v))arr.push(v);
+}
+return arr;
+}
+
+function processEngine(){
+
+if(!levels)return;
+let arr=getM5();
+if(arr.length<2)return;
+
+let price=arr[arr.length-1];
+let prev=arr[arr.length-2];
+
+/* ===== CORE SIGNAL ===== */
+
+function breakSignal(tf){
+let high=levels[tf].high, low=levels[tf].low;
+if(prev>high && price>high)return "BUY";
+if(prev<low && price<low)return "SELL";
+return "WAIT";
+}
+
+let h1=breakSignal("H1");
+let m30=breakSignal("M30");
+let m15=breakSignal("M15");
+let m5=price>prev?"BUY":"SELL";
+
+/* ===== FLOW ===== */
+
+let flowSig="NEUTRAL";
+if(arr.length>=5){
+let up=0,down=0;
+for(let i=arr.length-4;i<arr.length;i++){
+if(arr[i]>arr[i-1])up++;
+else if(arr[i]<arr[i-1])down++;
+}
+if(up>=4)flowSig="STRONG_BUY";
+else if(down>=4)flowSig="STRONG_SELL";
+}
+
+/* ===== PRESSURE ===== */
+
+let pressure=0;
+let side=null;
+for(let i=arr.length-1;i>=0;i--){
+let p=arr[i];
+if(p>levels.M15.high){
+if(side==="SELL")break;
+side="BUY";pressure++;
+}
+else if(p<levels.M15.low){
+if(side==="BUY")break;
+side="SELL";pressure++;
+}
+else break;
+}
+
+/* ===== SCORE ===== */
+
+let score=0;
+score+=h1==="BUY"?4:h1==="SELL"?-4:0;
+score+=m30==="BUY"?3:m30==="SELL"?-3:0;
+score+=m15==="BUY"?2:m15==="SELL"?-2:0;
+score+=m5==="BUY"?1:-1;
+score+=flowSig==="STRONG_BUY"?2:flowSig==="STRONG_SELL"?-2:0;
+score+=pressure;
+
+let final="NETRAL";
+if(score>=10)final="🚀 GOLDEN BUY";
+else if(score<=-10)final="🚀 GOLDEN SELL";
+else if(score>=6)final="🔥 DOMINASI BUY";
+else if(score<=-6)final="🔥 DOMINASI SELL";
+
+/* ===== UPDATE CORE UI ===== */
+
+h1Status.innerText="H1: "+h1;
+m30Status.innerText="M30: "+m30;
+m15Status.innerText="M15: "+m15;
+m5Status.innerText="M5: "+m5;
+flowStatus.innerText="FLOW: "+flowSig;
+pressureStatus.innerText="PRESSURE: "+pressure;
+finalStatus.innerText="FINAL: "+final;
+confidenceBar.style.width=Math.min(100,Math.abs(score)*5)+"%";
+
+/* ===== DEEP FLOW ===== */
+
+let flowText="";
+if(flowSig==="STRONG_BUY"){
+flowText="🟢 FLOW STRONG BUY → 4 dari 5 candle terakhir naik.\nMomentum mikro dominan.\nMarket dalam fase ekspansi naik (short term momentum expansion).";
+}
+else if(flowSig==="STRONG_SELL"){
+flowText="🔴 FLOW STRONG SELL → 4 dari 5 candle terakhir turun.\nTekanan jual mikro dominan.\nMarket dalam fase ekspansi turun.";
+}
+else{
+flowText="🟡 FLOW NETRAL → Tidak ada dominasi jelas.\nBisa fase transisi, konsolidasi, atau kompresi sebelum impuls.";
+}
+deepFlow.innerText=flowText;
+
+/* ===== STRUCTURE ===== */
+
+let structureText="";
+if(h1===m30 && m30===m15 && h1!=="WAIT"){
+structureText="🧭 ALIGNMENT KUAT → Semua TF satu arah ("+h1+").\nKondisi trend continuation.";
+}
+else if(h1!==m30 && h1!=="WAIT" && m30!=="WAIT"){
+structureText="⚠ TF Konflik → H1 dan M30 berbeda.\nPotensi retrace atau trap.";
+}
+else{
+structureText="📊 Struktur belum selaras penuh.\nPerlu konfirmasi tambahan.";
+}
+deepStructure.innerText=structureText;
+
+/* ===== INSTITUTIONAL ===== */
+
+let instText="";
+if(!institutional){
+instText="🏦 Institutional filter tidak aktif.";
+}else{
+let high=institutional.H4.high;
+let low=institutional.H4.low;
+let mid=(high+low)/2;
+
+if(price>=high){
+instText="🚨 Harga di atas H4 High → Area distribusi.\nRawan fake breakout.";
+}
+else if(price<=low){
+instText="🚨 Harga di bawah H4 Low → Area akumulasi.\nRawan false breakdown.";
+}
+else if(Math.abs(price-mid)<(high-low)*0.2){
+instText="🟢 Harga di tengah range H4 → Aman scalp teknikal.";
+}
+else if(price>mid){
+instText="📈 Zona atas range H4 → Bias bullish tapi rawan distribusi.";
+}
+else{
+instText="📉 Zona bawah range H4 → Bias bearish tapi rawan akumulasi.";
+}
+}
+deepInstitution.innerText=instText;
+
+/* ===== CONFLICT ===== */
+
+let conflict="";
+if(final.includes("BUY") && instText.includes("distribusi")){
+conflict="⚠ WARNING → BUY di zona distribusi.\nRisiko fake breakout.";
+}
+else if(final.includes("SELL") && instText.includes("akumulasi")){
+conflict="⚠ WARNING → SELL di zona akumulasi.\nRisiko short squeeze.";
+}
+else{
+conflict="✅ Tidak ada konflik besar antara struktur & zona institusi.";
+}
+deepConflict.innerText=conflict;
+
+/* ===== FINAL CONCLUSION ===== */
+
+let conclusion="";
+if(final.includes("GOLDEN")){
+conclusion="🔥 GOLDEN MOMENT → Struktur kuat + momentum + skor tinggi.\nPotensi makan besar.";
+}
+else if(final.includes("DOMINASI")){
+conclusion="⚡ Dominasi arah → Cocok makan harian (scalp disiplin).";
+}
+else{
+conclusion="⏳ Belum ada keunggulan statistik jelas.\nSabar lebih baik.";
+}
+deepConclusion.innerText=conclusion;
+
+}
+
+</script>
+</body>
+</html>
